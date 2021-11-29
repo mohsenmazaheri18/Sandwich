@@ -1,88 +1,186 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 public class Moving : MonoBehaviour
 {
 
+
+    //Public Function
     [Header("Component Sandwich in Game")] public GameObject[] component_Sandwich;
 
-    [Header("New Place In Plate")] public Transform[] place = new Transform[5];
+    [Header("New Place In Plate")] public Transform[] place;
+    public GameObject[] parent_of_sandwich;
 
-    public GameObject[] _placeStatus;
-    
-    bool alive = true;
+    [Header("Speed To Move")] public float speed = 5;
 
-    public float speed = 5;
-    [SerializeField] Rigidbody rb;
+    [Header("RigidBody Plate To Move")] [SerializeField]
+    Rigidbody rb;
 
-    float horizontalInput;
     [SerializeField] float horizontalMultiplier = 2;
 
-    public float speedIncreasePerPoint = 0.1f;
+    [Header("Collision Parent")] public GameObject parent_of_CS;
 
+    [Header("Prefab Player and Spawn Point")]
+    public GameObject player;
+
+    public GameObject spawnPoint, player_Scene;
+
+    [Header("Canvas Win && Lose")]
+    public GameObject Lose;
+    public GameObject Win;
+
+    [Header("Start Game")] public GameObject TouchHelp;
+
+    //Private Function
+    private bool alive = true;
+    private int _countCoolplace = 0;
+    private int _countCom = 0;
+    private int _countLose = 0;
     private Vector3 forwardMove;
     private Vector3 horizontalMove;
-
     private bool move;
+    private float horizontalInput;
+    private Touch theTouch;
+
     private void Start()
     {
         //Find all of Component in Game
-        component_Sandwich = GameObject.FindGameObjectsWithTag("Component_Sandwich");
+        move = true;
     }
-    private void Update () {
-        if (!alive) return;
-
-        if (Input.GetKey(KeyCode.Space))
+    private void Update()
+    {
+        transform.rotation = rb.rotation;
+        if (Input.touchCount > 0)
         {
-            move = true;
-            Debug.Log(move);
-            if (move)
+            theTouch = Input.GetTouch(0);
+            if (theTouch.phase == TouchPhase.Moved)
             {
-                forwardMove = -transform.up * (speed * Time.fixedDeltaTime);
-                horizontalMove= transform.right * (horizontalInput * speed * Time.fixedDeltaTime * horizontalMultiplier);
-                rb.MovePosition(rb.position + forwardMove + horizontalMove);
+                if (move)
+                {
+                    transform.position = new Vector3(
+                        transform.position.x + theTouch.deltaPosition.x * speed, transform.position.y,
+                        transform.position.z);
+                }
+                
+                /*horizontalMove = transform.right *
+                                 (horizontalInput * speed * Time.fixedDeltaTime * horizontalMultiplier);
+                rb.MovePosition(rb.position + forwardMove + horizontalMove);*/
+            }
+
+            if (theTouch.phase==TouchPhase.Stationary)
+            {
+                if (move)
+                {
+                    rb.velocity = new Vector3(0, 0, 30f);
+                    forwardMove = -transform.up * (10f * Time.fixedDeltaTime);
+                }
+            }
+
+            if (theTouch.phase==TouchPhase.Began)
+            {
+                TouchHelp.SetActive(false);
             }
         }
-        else
+
+       // horizontalInput = Input.GetAxis("Horizontal");
+
+        if (transform.position.y < -3)
         {
-            move = false;
-            Debug.Log(move);
-        }
 
-
-        
-        horizontalInput = Input.GetAxis("Horizontal");
-
-        if (transform.position.y < -5) {
-            
+            Lose.SetActive(true);
+            // //spawn again
+            // transform.position = spawnPoint.transform.position;
+            // transform.rotation = Quaternion.Euler(-90, 0, 0);
+            // rb.isKinematic = true;
+            // rb.isKinematic = false;
+            // RisingWater();
         }
     }
 
-    private int _countCool = 0;
     private void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.CompareTag("Component_Sandwich"))
         {
-            Debug.Log(_countCool);
-            HelpedMehod(_countCool);
+            Debug.Log(_countCoolplace);
+            Debug.Log(_countCom);
+            HelpedMehod(_countCoolplace, _countCom);
+        }
 
-            if (component_Sandwich[_countCool].transform.GetChild(0))
-            {
-                
-            }
+        if (other.gameObject.CompareTag("Next_CS"))
+        {
+            
+        }
+        
+        if (other.gameObject.CompareTag("Trap"))
+        {
+            GetTrap();
+        }
+
+        if (other.gameObject.CompareTag("Win"))
+        {
+            Win.SetActive(true);
+            move = false;
+        }
+
+    }
+
+    private void HelpedMehod(int placed, int comSan)
+    {
+     /*   Debug.Log("parrented");
+        
+        component_Sandwich[comSan].transform.position = place[placed].position;
+        component_Sandwich[comSan].transform.SetParent(parent_of_sandwich[placed].transform);
+        component_Sandwich[comSan].transform.rotation = parent_of_sandwich[comSan].transform.rotation;
+        component_Sandwich[comSan].GetComponent<Component_Sandwich_Anim>().enabled = false;
+        component_Sandwich[comSan].GetComponent<BoxCollider>().enabled = false;
+        component_Sandwich[comSan].transform.GetChild(0).GetComponent<BoxCollider>().enabled = false;
+         _countCoolplace += 1;
+        //_countCom += 1;*/
+    }
+
+    private void GetTrap()
+    {
+        for (int i = 0; i < _countCom; i++)
+        {
+            StartCoroutine(WaitToDestroy());
+            component_Sandwich[i].transform.SetParent(parent_of_CS.transform);
+            component_Sandwich[i].transform.GetChild(0).GetComponent<BoxCollider>().enabled = true;
+            component_Sandwich[i].AddComponent<Rigidbody>();
+        }
+
+        _countCoolplace = 0;
+    }
+
+    // private void RisingWater()
+    // {
+    //     for (int i = 0; i < _countCom; i++)
+    //     {
+    //         component_Sandwich[i].SetActive(false);
+    //         _countCool = 0;
+    //     }
+    // }
+
+    private IEnumerator WaitToDestroy()
+    {
+        yield return new WaitForSeconds(2f);
+        for (int i = 0; i < _countCom; i++)
+        {
+            component_Sandwich[i].SetActive(false);
+            Debug.Log(_countLose);
         }
     }
 
-    public GameObject[] parent_of_sandwich;
-    private void HelpedMehod(int placed)
+    public void NextLevel()
     {
-        Debug.Log("parrented");
-        component_Sandwich[placed].transform.position = place[placed].position;
-        component_Sandwich[placed].transform.SetParent(parent_of_sandwich[placed].transform);
-        component_Sandwich[placed].GetComponent<BoxCollider>().enabled = false;
-        component_Sandwich[placed].transform.GetChild(0).GetComponent<BoxCollider>().enabled = false;
-        _countCool += 1;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
+    }
 
-        // _placeStatus[1].SetActive(true);
-        // _placeStatus[0].SetActive(false);
+    public void RetryGame()
+    {
+        var scene = SceneManager.GetActiveScene();
+        SceneManager.LoadScene(scene.name);
     }
 }

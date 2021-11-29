@@ -10,6 +10,9 @@ TagManager:
   - Tomato
   - Broad
   - Component_Sandwich
+  - Trap
+  - Next_CS
+  - Win
   layers:
   - Default
   - TransparentFX
